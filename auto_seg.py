@@ -3,18 +3,26 @@ import numpy as np
 import os
 from skimage.io import imread_collection
 from clustering_alg import act_contour, agg_cluster, mean_shift, k_means
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--source', metavar='source', type=str, help='enter the images folder')
+args = parser.parse_args()
 
 WIDTH = 640
 HIGHT = 640
-IMG_PATH = 'pear-seg/images/train'
-LABELS_PATH = 'pear-seg/labels/train'
+IMG_PATH = 'seg-dataset/images/train'
+LABELS_PATH = 'seg-dataset/labels/train'
 
-change_img_names = False
+path  = args.source
 
-if change_img_names:
-    for num, filename in enumerate(os.listdir(IMG_PATH)):
-        name = str(format((num+1)/1000000, '6f'))
-        os.rename(os.path.join(IMG_PATH, filename), os.path.join(IMG_PATH, f'{name[2:]}.jpg'))
+if not os.path.exists(IMG_PATH):
+    os.makedirs(IMG_PATH)
+    os.makedirs(LABELS_PATH)
+
+for num, filename in enumerate(os.listdir(path)):
+    name = str(format((num+1)/1000000, '6f'))
+    os.rename(os.path.join(path, filename), os.path.join(IMG_PATH, f'{name[2:]}.jpg'))
 
 
 images_coll = imread_collection(IMG_PATH +'/*jpg*')
