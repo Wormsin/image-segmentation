@@ -1,12 +1,36 @@
 import cv2
 import numpy as np
 import os
+import time 
 from shutil import copy
 import argparse
 import matplotlib.pyplot as plt 
 from skimage.io import imread_collection
-from clustering_alg import act_contour, agg_cluster, mean_shift, k_means
+from clustering_alg import act_contour, agg_cluster, mean_shift, k_means, mask2contours
 
+
+def FrameCapture(path, img_path, fps): 
+    
+    vidObj = cv2.VideoCapture(path) 
+  
+    count = 0
+    t = time.time()
+    start = time.time()
+    success, image = vidObj.read()
+
+    while success: 
+
+        if time.time()-t >= 1/(fps*20) or count==0:
+            cv2.imwrite(img_path+f"/frame{count}.jpg", image) 
+            t = time.time()
+            count += 1
+
+        if cv2.waitKey(1) == ord('q'):
+            break 
+
+        success, image = vidObj.read()
+    vidObj.release()
+    cv2.destroyAllWindows()
 
 
 def contours2mask(contours, path):
@@ -24,7 +48,9 @@ def contours2mask(contours, path):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--source', metavar='source', type=str, help='enter the images folder')
+parser.add_argument('--source', metavar='source', default='images', type=str, help='enter the images folder')
+parser.add_argument('--video', metavar='video', type=str, default='', help='enter the path to the video')
+parser.add_argument('--fps', metavar='video', type=int, default=10, help='enter the fps for a video')
 args = parser.parse_args()
 
 print('\n1--active contours, 2--agglomerative clustering, 3--mean shift, 4--k_means\n')
@@ -39,17 +65,24 @@ IMG_PATH = alg_name+'-seg/images/train'
 LABELS_PATH = alg_name+'-seg/labels/train'
 MASK_PATH=alg_name+'-seg/masks'
 
-path  = args.source
+path_imgs  = args.source
+video_path = args.video
+fps = args.fps
 
 if not os.path.exists(IMG_PATH):
     os.makedirs(IMG_PATH)
     os.makedirs(LABELS_PATH)
     os.makedirs(MASK_PATH)
 
+if not os.path.exists(path_imgs):
+    os.makedirs(path_imgs)
 
-for num, filename in enumerate(os.listdir(path)):
+if video_path!='':
+    FrameCapture(video_path, path_imgs, fps)
+
+for num, filename in enumerate(os.listdir(path_imgs)):
     name = str(format((num+1)/1000000, '6f'))
-    copy(os.path.join(path, filename), os.path.join(IMG_PATH, f'{name[2:]}.jpg'))
+    copy(os.path.join(path_imgs, filename), os.path.join(IMG_PATH, f'{name[2:]}.jpg'))
 
 
 images_coll = imread_collection(IMG_PATH +'/*jpg*')
