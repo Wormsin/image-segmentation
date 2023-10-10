@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def contours2mask(contours, path, width, height, save=True):
-    masks = np.zeros((640, 640), dtype=np.uint8)
+    masks = np.zeros((width, height), dtype=np.uint8)
     for i in range(len(contours)):
         cont = contours[i]
         cont[:,0] = cont[:, 0]*width
@@ -21,12 +21,12 @@ def contours2mask(contours, path, width, height, save=True):
         plt.imsave(path, masks)
     return masks
 
-def mask2contours(mask, rows, cols):
+def mask2contours(mask, height, width):
     mask = mask.astype('uint8')
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours = [x for x in contours]
     for i in range(len(contours)):
-        contours[i] = contours[i].reshape(-1, 2)/[cols, rows]
+        contours[i] = contours[i].reshape(-1, 2)/[width, height]
     return contours
 
 def res_down(n, img):
