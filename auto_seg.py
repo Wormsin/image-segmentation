@@ -5,21 +5,18 @@ import time
 from shutil import copy
 import argparse
 import matplotlib.pyplot as plt 
+import albumentations as A
 from skimage.io import imread_collection
-from clustering_alg import act_contour, agg_cluster, mean_shift, k_means, mask2contours
+from clustering_alg import act_contour, agg_cluster, mean_shift, k_means, mask2contours, contours2mask 
 
 
-def FrameCapture(path, img_path, fps): 
-    
+def FrameCapture(path, img_path, fps):   
     vidObj = cv2.VideoCapture(path) 
-  
     count = 0
     t = time.time()
     start = time.time()
     success, image = vidObj.read()
-
     while success: 
-
         if time.time()-t >= 1/(fps*20) or count==0:
             cv2.imwrite(img_path+f"/frame{count}.jpg", image) 
             t = time.time()
@@ -27,24 +24,26 @@ def FrameCapture(path, img_path, fps):
 
         if cv2.waitKey(1) == ord('q'):
             break 
-
         success, image = vidObj.read()
     vidObj.release()
     cv2.destroyAllWindows()
 
+def augment(image, mask, num_name, num=5):
+    transform = A.Compose([
+    A.RandomCrop(p=0.7, width=256, height=256),
+    A.HorizontalFlip(p=0.5),
+    A.VerticalFlip(p=0.5),
+    A.RandomRotate90(p=0.5),
+    A.RandomBrightnessContrast(p=0.8),
+    ])
+    for i in range(num):
+        name = f'/{num_name+i}.jpg'
+        transformed = transform(image=image, mask = mask)
+        plt.imsave(IMG_PATH+name, transformed['image'])
+        plt.imsave(MASK_PATH+name, transformed['mask'])
+    global num_imgs
+    num_imgs+=num
 
-def contours2mask(contours, path):
-    masks = np.zeros((640, 640), dtype=np.uint8)
-    for i in range(len(contours)):
-        cont = contours[i]
-        cont[:,0] = cont[:, 0]*WIDTH
-        cont[:, 1] = cont[:, 1]*HEIGHT
-        mask = np.zeros((WIDTH, HEIGHT), dtype=np.uint8)
-        cont = cont.astype(np.int32)
-        polygons = cont.reshape(1, -1, 2)
-        mask = cv2.fillPoly(mask, polygons, color=1)
-        masks+=mask
-    plt.imsave(path, masks)
 
 
 parser = argparse.ArgumentParser()
@@ -80,10 +79,11 @@ if not os.path.exists(path_imgs):
 if video_path!='':
     FrameCapture(video_path, path_imgs, fps)
 
+num_imgs = 0
 for num, filename in enumerate(os.listdir(path_imgs)):
     name = str(format((num+1)/1000000, '6f'))
     copy(os.path.join(path_imgs, filename), os.path.join(IMG_PATH, f'{name[2:]}.jpg'))
-
+    num_imgs = num+1
 
 images_coll = imread_collection(IMG_PATH +'/*jpg*')
 images = []
@@ -97,7 +97,10 @@ for num, image in enumerate(images):
     txt_path = LABELS_PATH + f'/{name[2:]}'
     if not os.path.exists(f'{txt_path}.txt'):
         img_contours = alg(image)
-        contours2mask(img_contours, MASK_PATH+f'/{name[2:]}.jpg')
+        mask = contours2mask(img_contours, MASK_PATH+f'/{name[2:]}.jpg', WIDTH, HEIGHT)
+        augment(image, mask, 1+num_imgs, 7)
+
+
         for cont in img_contours:
             seg = cont.reshape(-1)
             line = (cls, *seg)  # label format
