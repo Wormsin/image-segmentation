@@ -6,13 +6,13 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-def contours2mask(contours, path, width, height, save=True):
-    masks = np.zeros((width, height), dtype=np.uint8)
+def contours2mask(contours, path, height, width, save=True):
+    masks = np.zeros((height, width), dtype=np.uint8)
     for i in range(len(contours)):
         cont = contours[i]
         cont[:,0] = cont[:, 0]*width
         cont[:, 1] = cont[:, 1]*height
-        mask = np.zeros((width, height), dtype=np.uint8)
+        mask = np.zeros((height, width), dtype=np.uint8)
         cont = cont.astype(np.int32)
         polygons = cont.reshape(1, -1, 2)
         mask = cv2.fillPoly(mask, polygons, color=1)

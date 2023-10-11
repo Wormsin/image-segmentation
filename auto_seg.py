@@ -14,16 +14,16 @@ def FrameCapture(path, img_path, fps):
     vidObj = cv2.VideoCapture(path) 
     count = 0
     t = time.time()
-    start = time.time()
     success, image = vidObj.read()
+    dt = 0.001*(30/fps-1)
     while success: 
-        if time.time()-t >= 1/(fps*20) or count==0:
+        if time.time()-t >= dt or count==0:
             cv2.imwrite(img_path+f"/frame{count}.jpg", image) 
             t = time.time()
             count += 1
 
-        if cv2.waitKey(1) == ord('q'):
-            break 
+        #if cv2.waitKey(1) == ord('q'):
+         #   break 
         success, image = vidObj.read()
     vidObj.release()
     cv2.destroyAllWindows()
@@ -44,8 +44,8 @@ def augment(image, mask, num_name, num=5):
         mask_path = MASK_PATH+name
         if not os.path.exists(mask_path):
             transformed = transform(image=image, mask = mask)
-            trans_img = cv2.resize(transformed['image'], (WIDTH, HEIGHT))
-            trans_mask = cv2.resize(transformed['mask'], (WIDTH, HEIGHT))
+            trans_img = transformed['image']
+            trans_mask = transformed['mask']
             plt.imsave(impath, trans_img)
             plt.imsave(mask_path, trans_mask)
     global num_imgs
@@ -59,7 +59,8 @@ def make_labels(cls=0):
         if not os.path.exists(txt_path):
             mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
             trash, mask = cv2.threshold(mask, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-            img_contours = mask2contours(mask, height=HEIGHT, width=WIDTH)
+            h_mask, w_mask = mask.shape
+            img_contours = mask2contours(mask, height=h_mask, width=w_mask)
             for cont in img_contours:
                 seg = cont.reshape(-1)
                 line = (cls, *seg)  # label format
@@ -71,11 +72,11 @@ def aspect_ratio(img):
     h, w, ch = img.shape
     r = max(np.round(w/WIDTH), np.round(h/HEIGHT))
     wn, hn  = (int(w//r), int(h//r))
-    return (wn, hn)
+    return (hn, wn)
 def img_resize(img, path):
-    wn, hn  = aspect_ratio(img)
+    hn, wn  = aspect_ratio(img)
     img = cv2.resize(img, (wn, hn))
-    canvas = np.ones((WIDTH, HEIGHT, 3), dtype='uint8')*255
+    canvas = np.ones((HEIGHT, WIDTH, 3), dtype='uint8')*255
     x_offset = abs(wn - WIDTH)
     y_offset = abs(hn - HEIGHT)
     canvas[0:HEIGHT-y_offset, 0:WIDTH-x_offset] = img
@@ -132,11 +133,12 @@ for num, filename in enumerate(os.listdir(path_imgs)):
 ORIGINAL_NUM = num_imgs
 for num, filename in enumerate(os.listdir(IMG_PATH)):
         image = cv2.imread(os.path.join(IMG_PATH, filename))
-        image = cv2.resize(image, (WIDTH, HEIGHT))
+        height_new, width_new = aspect_ratio(image)
+        image = cv2.resize(image, (width_new, height_new))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        plt.imsave(os.path.join(IMG_PATH, filename), image)
+        #plt.imsave(os.path.join(IMG_PATH, filename), image)
         img_contours = alg(image)
-        mask = contours2mask(img_contours, os.path.join(MASK_PATH,filename), WIDTH, HEIGHT)
+        mask = contours2mask(img_contours, os.path.join(MASK_PATH,filename), height_new, width_new)
         if aug and num<ORIGINAL_NUM:
             augment(image, mask, 1+num_imgs)
 
