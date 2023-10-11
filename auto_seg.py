@@ -35,32 +35,53 @@ def augment(image, mask, num_name, num=5):
     A.VerticalFlip(p=0.2),
     A.RandomRotate90(p=0.5),
     A.RandomBrightnessContrast(p=0.8),
+    A.Transpose(p=1)
     ])
     for i in range(num):
         name = str(format((num_name+i)/1000000, '6f'))
         name = f'/{name[2:]}.jpg'
-        transformed = transform(image=image, mask = mask)
-        trans_img = cv2.resize(transformed['image'], (WIDTH, HEIGHT))
-        trans_mask = cv2.resize(transformed['mask'], (WIDTH, HEIGHT))
-        plt.imsave(IMG_PATH+name, trans_img)
-        plt.imsave(MASK_PATH+name, trans_mask)
+        impath = IMG_PATH+name
+        mask_path = MASK_PATH+name
+        if not os.path.exists(mask_path):
+            transformed = transform(image=image, mask = mask)
+            trans_img = cv2.resize(transformed['image'], (WIDTH, HEIGHT))
+            trans_mask = cv2.resize(transformed['mask'], (WIDTH, HEIGHT))
+            plt.imsave(impath, trans_img)
+            plt.imsave(mask_path, trans_mask)
     global num_imgs
     num_imgs+=num
 
 def make_labels(cls=0):
-    
     for filename in os.listdir(MASK_PATH):
         mask = cv2.imread(os.path.join(MASK_PATH, filename))
-        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-        trash, mask = cv2.threshold(mask, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-        img_contours = mask2contours(mask, height=HEIGHT, width=WIDTH)
         txt_name = filename.split('.')[0]
         txt_path = os.path.join(LABELS_PATH, f'{txt_name}.txt')
-        for cont in img_contours:
-            seg = cont.reshape(-1)
-            line = (cls, *seg)  # label format
-            with open(txt_path, 'a') as f:
-                f.write(('%g ' * len(line)).rstrip() % line + '\n')
+        if not os.path.exists(txt_path):
+            mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+            trash, mask = cv2.threshold(mask, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+            img_contours = mask2contours(mask, height=HEIGHT, width=WIDTH)
+            for cont in img_contours:
+                seg = cont.reshape(-1)
+                line = (cls, *seg)  # label format
+                with open(txt_path, 'a') as f:
+                    f.write(('%g ' * len(line)).rstrip() % line + '\n')
+
+
+def aspect_ratio(img):
+    h, w, ch = img.shape
+    r = max(np.round(w/WIDTH), np.round(h/HEIGHT))
+    wn, hn  = (int(w//r), int(h//r))
+    return (wn, hn)
+def img_resize(img, path):
+    wn, hn  = aspect_ratio(img)
+    img = cv2.resize(img, (wn, hn))
+    canvas = np.ones((WIDTH, HEIGHT, 3), dtype='uint8')*255
+    x_offset = abs(wn - WIDTH)
+    y_offset = abs(hn - HEIGHT)
+    canvas[0:HEIGHT-y_offset, 0:WIDTH-x_offset] = img
+    canvas = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+    plt.imsave(path, canvas)
+    return canvas
 
 
 parser = argparse.ArgumentParser()
@@ -108,6 +129,7 @@ for num, filename in enumerate(os.listdir(path_imgs)):
     copy(os.path.join(path_imgs, filename), os.path.join(IMG_PATH, f'{name[2:]}.jpg'))
     num_imgs = num+1
 
+ORIGINAL_NUM = num_imgs
 for num, filename in enumerate(os.listdir(IMG_PATH)):
         image = cv2.imread(os.path.join(IMG_PATH, filename))
         image = cv2.resize(image, (WIDTH, HEIGHT))
@@ -115,7 +137,7 @@ for num, filename in enumerate(os.listdir(IMG_PATH)):
         plt.imsave(os.path.join(IMG_PATH, filename), image)
         img_contours = alg(image)
         mask = contours2mask(img_contours, os.path.join(MASK_PATH,filename), WIDTH, HEIGHT)
-        if aug:
+        if aug and num<ORIGINAL_NUM:
             augment(image, mask, 1+num_imgs)
 
 make_labels()
