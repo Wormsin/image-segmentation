@@ -6,8 +6,22 @@ from shutil import copy
 import argparse
 import matplotlib.pyplot as plt 
 import albumentations as A
-from skimage.io import imread_collection
-from clustering_alg import act_contour, agg_cluster, mean_shift, k_means, mask2contours, contours2mask 
+from clustering_alg import act_contour, agg_cluster, mean_shift, k_means, mask2contours, contours2mask
+
+'''
+print('\n1--active contours, 2--agglomerative clustering, 3--mean shift, 4--k_means\n')
+ind_alg=int(input('input the number of segmentation alg: '))-1
+'''
+ind_alg=3
+algs = [act_contour, agg_cluster, mean_shift, k_means]
+alg = algs[ind_alg]
+alg_name=alg.__name__
+
+WIDTH = 640
+HEIGHT = 640
+IMG_PATH = alg_name+'/seg-dataset/images/train'
+LABELS_PATH = alg_name+'/seg-dataset/labels/train'
+MASK_PATH=alg_name+'/masks'
 
 
 def FrameCapture(path, img_path, fps):   
@@ -84,62 +98,56 @@ def img_resize(img, path):
     plt.imsave(path, canvas)
     return canvas
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--source', metavar='source', default='images', type=str, help='enter the images folder')
+    parser.add_argument('--video', metavar='video', type=str, default='', help='enter the path to the video')
+    parser.add_argument('--fps', metavar='video', type=int, default=10, help='enter the fps for a video')
+    parser.add_argument('--aug', action='store_true', help='turn on the augmentation')
+    args = parser.parse_args()
+    return args
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--source', metavar='source', default='images', type=str, help='enter the images folder')
-parser.add_argument('--video', metavar='video', type=str, default='', help='enter the path to the video')
-parser.add_argument('--fps', metavar='video', type=int, default=10, help='enter the fps for a video')
-parser.add_argument('--aug', action='store_true', help='turn on the augmentation')
-args = parser.parse_args()
+def run(args):
 
-'''
-print('\n1--active contours, 2--agglomerative clustering, 3--mean shift, 4--k_means\n')
-ind_alg=int(input('input the number of segmentation alg: '))-1
-'''
-ind_alg=3
-algs = [act_contour, agg_cluster, mean_shift, k_means]
-alg = algs[ind_alg]
-alg_name=alg.__name__
+    path_imgs  = args.source
+    video_path = args.video
+    fps = args.fps
+    aug = args.aug
 
+    if not os.path.exists(IMG_PATH):
+        os.makedirs(IMG_PATH)
+        os.makedirs(LABELS_PATH)
+        os.makedirs(MASK_PATH)
 
-WIDTH = 640
-HEIGHT = 640
-IMG_PATH = alg_name+'/seg-dataset/images/train'
-LABELS_PATH = alg_name+'/seg-dataset/labels/train'
-MASK_PATH=alg_name+'/masks'
+    if not os.path.exists(path_imgs):
+        os.makedirs(path_imgs)
 
-path_imgs  = args.source
-video_path = args.video
-fps = args.fps
-aug = args.aug
+    if video_path!='':
+        FrameCapture(video_path, path_imgs, fps)
 
-if not os.path.exists(IMG_PATH):
-    os.makedirs(IMG_PATH)
-    os.makedirs(LABELS_PATH)
-    os.makedirs(MASK_PATH)
+    num_imgs = 0
+    for num, filename in enumerate(os.listdir(path_imgs)):
+        name = str(format((num+1)/1000000, '6f'))
+        copy(os.path.join(path_imgs, filename), os.path.join(IMG_PATH, f'{name[2:]}.jpg'))
+        num_imgs = num+1
 
-if not os.path.exists(path_imgs):
-    os.makedirs(path_imgs)
+    ORIGINAL_NUM = num_imgs
+    for num, filename in enumerate(os.listdir(IMG_PATH)):
+            image = cv2.imread(os.path.join(IMG_PATH, filename))
+            height_new, width_new = aspect_ratio(image)
+            image = cv2.resize(image, (width_new, height_new))
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            #plt.imsave(os.path.join(IMG_PATH, filename), image)
+            img_contours = alg(image)
+            mask = contours2mask(img_contours, os.path.join(MASK_PATH,filename), height_new, width_new)
+            if aug and num<ORIGINAL_NUM:
+                augment(image, mask, 1+num_imgs)
 
-if video_path!='':
-    FrameCapture(video_path, path_imgs, fps)
+    make_labels()
 
-num_imgs = 0
-for num, filename in enumerate(os.listdir(path_imgs)):
-    name = str(format((num+1)/1000000, '6f'))
-    copy(os.path.join(path_imgs, filename), os.path.join(IMG_PATH, f'{name[2:]}.jpg'))
-    num_imgs = num+1
+def main(args):
+    run(args)
 
-ORIGINAL_NUM = num_imgs
-for num, filename in enumerate(os.listdir(IMG_PATH)):
-        image = cv2.imread(os.path.join(IMG_PATH, filename))
-        height_new, width_new = aspect_ratio(image)
-        image = cv2.resize(image, (width_new, height_new))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        #plt.imsave(os.path.join(IMG_PATH, filename), image)
-        img_contours = alg(image)
-        mask = contours2mask(img_contours, os.path.join(MASK_PATH,filename), height_new, width_new)
-        if aug and num<ORIGINAL_NUM:
-            augment(image, mask, 1+num_imgs)
-
-make_labels()
+if __name__ == "__main__":
+    args = parse_args()
+    main(args)
