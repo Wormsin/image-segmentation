@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import os
 import time 
-from shutil import copy
+from shutil import copy, rmtree
 import argparse
 import matplotlib.pyplot as plt 
 import albumentations as A
@@ -19,9 +19,9 @@ alg_name=alg.__name__
 
 WIDTH = 640
 HEIGHT = 640
-IMG_PATH = alg_name+'/seg-dataset/images/train'
-LABELS_PATH = alg_name+'/seg-dataset/labels/train'
-MASK_PATH=alg_name+'/masks'
+IMG_PATH = 'seg-dataset/images/train'
+LABELS_PATH = 'seg-dataset/labels/train'
+MASK_PATH='masks'
 
 
 def FrameCapture(path, img_path, fps):   
@@ -114,23 +114,30 @@ def run(args):
     fps = args.fps
     aug = args.aug
 
-    if not os.path.exists(IMG_PATH):
+    if os.path.exists(IMG_PATH):
+        rmtree("seg-dataset")
+        rmtree(MASK_PATH)
         os.makedirs(IMG_PATH)
         os.makedirs(LABELS_PATH)
         os.makedirs(MASK_PATH)
 
-    if not os.path.exists(path_imgs):
-        os.makedirs(path_imgs)
-
     if video_path!='':
-        FrameCapture(video_path, path_imgs, fps)
+        if os.path.exists(path_imgs):
+            rmtree(path_imgs)
+        os.makedirs(path_imgs)
+        FrameCapture(video_path, path_imgs, fps) 
+    elif not os.path.exists(path_imgs):
+        print("There's no any image for segmentation, input the --source argument")
+        return
 
+    global num_imgs
     num_imgs = 0
     for num, filename in enumerate(os.listdir(path_imgs)):
         name = str(format((num+1)/1000000, '6f'))
         copy(os.path.join(path_imgs, filename), os.path.join(IMG_PATH, f'{name[2:]}.jpg'))
         num_imgs = num+1
 
+    
     ORIGINAL_NUM = num_imgs
     for num, filename in enumerate(os.listdir(IMG_PATH)):
             image = cv2.imread(os.path.join(IMG_PATH, filename))
