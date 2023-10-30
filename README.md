@@ -1,7 +1,7 @@
 # image-segmentation
 
 ### description
-####auto_seg.py#### creates the dataset from the video or set of images for training yolo segmentation model.
+####auto_seg.py creates the dataset from the video or set of images for training yolo segmentation model.
 
 clustering_alg.py has segmentation machine learning algorithms. 
 
