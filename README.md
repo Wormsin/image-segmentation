@@ -5,7 +5,7 @@
 
 **clustering_alg.py** has segmentation machine learning algorithms. 
 
-**run_yolo.py** addes a new class to dataset-seg.yaml and trains yolov5 on data that were made by auto_seg.py for this class
+**run_yolo.py** addes a new class to dataset-seg.yaml and trains yolov5 on data that were made by auto_seg.py for this class.
 
 ### run auto_seg.py
 To enable augmentation add ```--aug```
