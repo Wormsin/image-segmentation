@@ -107,6 +107,19 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+def get_class_num(data):
+    with open(data, "r+b") as file:
+        file.seek(-5, os.SEEK_END)
+        
+        while file.read(1) != b'\n':
+            file.seek(-2, os.SEEK_CUR)
+        last_line = file.readline().decode()
+    if last_line == "names:\n":
+        return 0
+    else:
+        return int(last_line[3])+1
+
+
 def run(args):
 
     path_imgs  = args.source
@@ -150,7 +163,7 @@ def run(args):
             if aug and num<ORIGINAL_NUM:
                 augment(image, mask, 1+num_imgs)
 
-    make_labels()
+    make_labels(get_class_num("dataset-seg.yaml"))
 
 def main(args):
     run(args)
