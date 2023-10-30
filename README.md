@@ -1,7 +1,7 @@
 # image-segmentation
 
 ### description
-auto_seg.py creates the dataset from the video or set of images for training yolo segmentation model.
+####auto_seg.py#### creates the dataset from the video or set of images for training yolo segmentation model.
 
 clustering_alg.py has segmentation machine learning algorithms. 
 
@@ -19,9 +19,9 @@ To change the fps add ```--fps NUMBER```, by default ```fps=10```
 ```ruby
 python auto_seg.py --source YOUR_FOLDER_WITH_IMAGES --aug
 ```
-### run auto_seg.py
+### run run_yolo.py
 
 ```ruby
 python run_yolo.py
->> nter the class name: 
+>> enter the class name: 
 ```
