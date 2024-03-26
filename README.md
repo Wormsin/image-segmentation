@@ -1,5 +1,5 @@
 # image-segmentation
-
+This code was made as part of a project to pack items with a delta robot.
 ### description
 **auto_seg.py** creates the dataset from the video or set of images for training yolo segmentation model.
 
