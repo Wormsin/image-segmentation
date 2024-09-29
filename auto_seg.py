@@ -130,9 +130,9 @@ def run(args):
     if os.path.exists(IMG_PATH):
         rmtree("seg-dataset")
         rmtree(MASK_PATH)
-        os.makedirs(IMG_PATH)
-        os.makedirs(LABELS_PATH)
-        os.makedirs(MASK_PATH)
+    os.makedirs(IMG_PATH)
+    os.makedirs(LABELS_PATH)
+    os.makedirs(MASK_PATH)
 
     if video_path!='':
         if os.path.exists(path_imgs):
